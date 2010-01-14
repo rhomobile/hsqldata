@@ -1,0 +1,9 @@
+DROP TABLE if EXISTS object_values;
+CREATE TABLE object_values (
+ source_id varchar(255) default NULL,
+ attrib varchar(255) default NULL,
+ object varchar(255) default NULL,
+ value varchar default NULL,
+ attrib_type varchar(255) default NULL);
+
+

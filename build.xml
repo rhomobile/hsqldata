@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project default="hsql" name="hsqldata standalone runner">
+	<target name="compile">
+		<mkdir dir="bin"/>
+		<javac source="1.6" target="1.6" srcdir="src" destdir="bin" debug="on"/>
+	</target>
+	<target name="clean">
+		<delete dir="bin"/>
+	</target>
+    <target name="hsql" depends="clean,compile">
+        <jar destfile="${basedir}/bin/hsqldata.jar" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Main-Class" value="com.rhomobile.hsqldata.HsqlData"/>
+                <attribute name="Class-Path" value="."/>
+            </manifest>
+            <fileset dir="${basedir}/bin"/>
+            <zipfileset excludes="META-INF/*.SF" src="${basedir}/lib/sqlitejdbc-v056.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="${basedir}/lib/hsqldb.jar"/>
+        </jar>
+    </target>
+</project>
