@@ -18,32 +18,21 @@ public class HsqlData {
 			String sqliteFile = args[0];
 			String hsqlFile = args[1];
 			String schemaFile = args[2];
-			String indexSchemaFile = args[3];
 			Class.forName("org.sqlite.JDBC");
-			Connection conn = DriverManager.getConnection("jdbc:sqlite:"
-					+ sqliteFile);
-			Statement stat = conn.createStatement();
-
+			Connection sqliteConn = DriverManager.getConnection("jdbc:sqlite:"+ sqliteFile);
 			Connection hsqlConn = hsqlOpen(hsqlFile);
+			
+			hsqlConn.createStatement().execute("SET PROPERTY \"hsqldb.default_table_type\" \'cached\'");
+			hsqlConn.createStatement().execute("SET PROPERTY \"hsqldb.nio_data_file\" FALSE");
+			
 			hsqlConn.createStatement().execute(loadSchema(schemaFile));
-			PreparedStatement hsqlPrep = hsqlConn
-					.prepareStatement("insert into object_values (source_id,object,attrib,value,attrib_type) values (?,?,?,?,?);");
+			
+			copyObjectValues(sqliteConn, hsqlConn);
+			copySources(sqliteConn, hsqlConn);
 
-			ResultSet rs = stat.executeQuery("select * from object_values;");
-			while (rs.next()) {
-				hsqlInsertRow(hsqlPrep, rs.getString("source_id"), rs
-						.getString("object"), rs.getString("attrib"), rs
-						.getString("value"), rs.getString("attrib_type"));
-			}
-
-			hsqlConn.setAutoCommit(false);
-			hsqlPrep.executeBatch();
-			hsqlConn.setAutoCommit(true);
-			hsqlConn.createStatement().execute(loadSchema(indexSchemaFile));
-			hsqlConn.createStatement().execute("SHUTDOWN");
-
-			rs.close();
-			conn.close();
+			hsqlConn.createStatement().execute("SHUTDOWN COMPACT");
+			
+			sqliteConn.close();
 			hsqlConn.close();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -66,14 +55,56 @@ public class HsqlData {
 		return buffer.toString();
 	}
 
-	private static void hsqlInsertRow(PreparedStatement stmt, String sourceId,
-			String object, String attrib, String value, String attribType)
-			throws Exception {
-		stmt.setString(1, sourceId);
-		stmt.setString(2, object);
-		stmt.setString(3, attrib);
-		stmt.setString(4, value);
-		stmt.setString(5, attribType);
-		stmt.addBatch();
+	private static void copyObjectValues(Connection sqliteConn, Connection hsqlConn) throws Exception
+	{
+		PreparedStatement hsqlPrep = hsqlConn.prepareStatement("insert into object_values (source_id,object,attrib,value,attrib_type) values (?,?,?,?,?);");
+
+		Statement sqliteStat = sqliteConn.createStatement();
+		ResultSet rs = sqliteStat.executeQuery("select * from object_values;");
+		
+		while (rs.next()) 
+		{
+			hsqlPrep.setInt(1, rs.getInt("source_id"));
+			hsqlPrep.setString(2, rs.getString("object"));
+			hsqlPrep.setString(3, rs.getString("attrib"));
+			hsqlPrep.setString(4, rs.getString("value"));
+			hsqlPrep.setString(5, rs.getString("attrib_type"));
+			hsqlPrep.addBatch();
+		}
+		
+		hsqlConn.setAutoCommit(false);
+		hsqlPrep.executeBatch();
+		hsqlConn.setAutoCommit(true);
+		
+		sqliteStat.close();
+		rs.close();
+		hsqlPrep.close();
 	}
+	
+	private static void copySources(Connection sqliteConn, Connection hsqlConn) throws Exception
+	{
+		PreparedStatement hsqlPrep = hsqlConn.prepareStatement("insert into sources (source_id,name,priority,partition,sync_type,source_attribs) values (?,?,?,?,?,?);");
+
+		Statement sqliteStat = sqliteConn.createStatement();
+		ResultSet rs = sqliteStat.executeQuery("select * from sources;");
+		
+		while (rs.next()) {
+			hsqlPrep.setInt(1, rs.getInt("source_id"));
+			hsqlPrep.setString(2, rs.getString("name"));
+			hsqlPrep.setInt(3, rs.getInt("priority"));
+			hsqlPrep.setString(4, rs.getString("partition"));
+			hsqlPrep.setString(5, rs.getString("sync_type"));
+			hsqlPrep.setString(6, rs.getString("source_attribs"));
+			hsqlPrep.addBatch();
+		}
+		
+		hsqlConn.setAutoCommit(false);
+		hsqlPrep.executeBatch();
+		hsqlConn.setAutoCommit(true);
+		
+		sqliteStat.close();
+		rs.close();
+		hsqlPrep.close();
+	}
+	
 }
