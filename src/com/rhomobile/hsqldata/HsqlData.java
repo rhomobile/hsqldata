@@ -18,6 +18,7 @@ public class HsqlData {
 			String sqliteFile = args[0];
 			String hsqlFile = args[1];
 			String schemaFile = args[2];
+			String indexFile = args.length > 3 ? args[3] : "";
 			Class.forName("org.sqlite.JDBC");
 			Connection sqliteConn = DriverManager.getConnection("jdbc:sqlite:"+ sqliteFile);
 			Connection hsqlConn = hsqlOpen(hsqlFile);
@@ -29,6 +30,9 @@ public class HsqlData {
 			
 			copyObjectValues(sqliteConn, hsqlConn);
 			copySources(sqliteConn, hsqlConn);
+
+            if ( indexFile.length()>0 )
+			    hsqlConn.createStatement().execute(loadSchema(indexFile));
 
 			hsqlConn.createStatement().execute("SHUTDOWN COMPACT");
 			
