@@ -13,7 +13,7 @@ public class HsqlData {
 	/**
 	 * @param args
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 		try {
 			String sqliteFile = args[0];
 			String hsqlFile = args[1];
@@ -40,6 +40,7 @@ public class HsqlData {
 			hsqlConn.close();
 		} catch (Exception e) {
 			e.printStackTrace();
+			throw e;
 		}
 	}
 
