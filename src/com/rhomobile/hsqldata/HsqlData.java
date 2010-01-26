@@ -28,8 +28,9 @@ public class HsqlData {
 			
 			hsqlConn.createStatement().execute(loadSchema(schemaFile));
 			
-			copyObjectValues(sqliteConn, hsqlConn);
-			copySources(sqliteConn, hsqlConn);
+			copyAllTables(sqliteConn, hsqlConn);
+			//copyObjectValues(sqliteConn, hsqlConn);
+			//copySources(sqliteConn, hsqlConn);
 
             if ( indexFile.length()>0 )
 			    hsqlConn.createStatement().execute(loadSchema(indexFile));
@@ -60,6 +61,78 @@ public class HsqlData {
 		return buffer.toString();
 	}
 
+	private static String createInsertStatement(ResultSet rsRows, String tableName) throws Exception
+	{
+		String strInsert = "INSERT INTO ";
+		
+		strInsert += tableName;
+		strInsert += "(";
+		String strQuest = ") VALUES(";
+		for (int i = 1; i <= rsRows.getMetaData().getColumnCount(); i++ )
+		{
+			if ( i > 1 )
+			{
+				strInsert += ",";
+				strQuest += ",";
+			}
+			
+			strInsert += rsRows.getMetaData().getColumnName(i);
+			strQuest += "?";
+		}
+		
+		strInsert += strQuest + ")"; 
+		return strInsert;
+	}
+	
+	private static void copyTable(String strTable, Connection sqliteConn, Connection hsqlConn) throws Exception
+	{
+		Statement sqliteStat = sqliteConn.createStatement();
+		ResultSet rsRows = sqliteStat.executeQuery("SELECT * FROM " + strTable);
+		PreparedStatement hsqlPrep = null;
+		
+		while (rsRows.next()) 
+		{
+	    	if ( hsqlPrep == null )
+	    	{
+	    		String strInsert = createInsertStatement(rsRows, strTable);
+	    		hsqlPrep = hsqlConn.prepareStatement(strInsert);
+	    	}
+
+	    	for ( int i = 1; i <= rsRows.getMetaData().getColumnCount(); i++)
+	    		hsqlPrep.setObject(i,rsRows.getObject(i));
+	    	
+    		hsqlPrep.addBatch();
+		}
+		
+		if ( hsqlPrep != null )
+		{
+			hsqlConn.setAutoCommit(false);
+			hsqlPrep.executeBatch();
+			hsqlConn.setAutoCommit(true);
+			
+			hsqlPrep.close();
+		}
+		
+		rsRows.close();
+		sqliteStat.close();
+	}
+	
+	private static void copyAllTables(Connection sqliteConn, Connection hsqlConn) throws Exception
+	{
+		Statement sqliteStat = sqliteConn.createStatement();
+		ResultSet rsTables = sqliteStat.executeQuery("SELECT name FROM sqlite_master WHERE type='table' ");
+		
+		while (rsTables.next()) 
+		{
+			String strTable = rsTables.getString("name");
+			
+			copyTable(strTable, sqliteConn, hsqlConn);
+		}
+		
+		rsTables.close();
+		sqliteStat.close();
+	}
+	
 	private static void copyObjectValues(Connection sqliteConn, Connection hsqlConn) throws Exception
 	{
 		PreparedStatement hsqlPrep = hsqlConn.prepareStatement("insert into object_values (source_id,object,attrib,value,attrib_type) values (?,?,?,?,?);");
