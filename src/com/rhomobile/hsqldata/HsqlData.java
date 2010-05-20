@@ -1,7 +1,5 @@
 package com.rhomobile.hsqldata;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -17,8 +15,6 @@ public class HsqlData {
 		try {
 			String sqliteFile = args[0];
 			String hsqlFile = args[1];
-			String schemaFile = args[2];
-			String indexFile = args.length > 3 ? args[3] : "";
 			Class.forName("org.sqlite.JDBC");
 			Connection sqliteConn = DriverManager.getConnection("jdbc:sqlite:"+ sqliteFile);
 			Connection hsqlConn = hsqlOpen(hsqlFile);
@@ -26,14 +22,9 @@ public class HsqlData {
 			hsqlConn.createStatement().execute("SET PROPERTY \"hsqldb.default_table_type\" \'cached\'");
 			hsqlConn.createStatement().execute("SET PROPERTY \"hsqldb.nio_data_file\" FALSE");
 			
-			hsqlConn.createStatement().execute(loadSchema(schemaFile));
+			hsqlConn.createStatement().execute(loadSchemaFromSqlite(sqliteConn));
 			
 			copyAllTables(sqliteConn, hsqlConn);
-			//copyObjectValues(sqliteConn, hsqlConn);
-			//copySources(sqliteConn, hsqlConn);
-
-            if ( indexFile.length()>0 )
-			    hsqlConn.createStatement().execute(loadSchema(indexFile));
 
 			hsqlConn.createStatement().execute("SHUTDOWN COMPACT");
 			
@@ -50,7 +41,7 @@ public class HsqlData {
 		return DriverManager.getConnection("jdbc:hsqldb:file:" + fileName,
 				"SA", "");
 	}
-
+/*
 	private static String loadSchema(String schemaFile) throws Exception {
 		StringBuffer buffer = new StringBuffer();
 		FileInputStream fis = new FileInputStream(schemaFile);
@@ -60,7 +51,30 @@ public class HsqlData {
 		}
 		return buffer.toString();
 	}
+*/
+	private static String loadSchemaFromSqlite(Connection sqliteConn) throws Exception 
+	{
+		Statement sqliteStat = sqliteConn.createStatement();
+		ResultSet rsTables = sqliteStat.executeQuery("SELECT sql FROM sqlite_master WHERE type='table' OR type='index'");
 
+		String strSql = "";
+		
+		while (rsTables.next()) 
+		{
+			String str = rsTables.getString("sql");
+			if ( str != null && str.length() > 0)
+			{
+				strSql += str;
+				strSql += ";\r\n";
+			}
+		}
+		
+		rsTables.close();
+		sqliteStat.close();
+		
+		return strSql;
+	}
+	
 	private static String createInsertStatement(ResultSet rsRows, String tableName) throws Exception
 	{
 		String strInsert = "INSERT INTO ";
@@ -132,7 +146,7 @@ public class HsqlData {
 		rsTables.close();
 		sqliteStat.close();
 	}
-	
+/*	
 	private static void copyObjectValues(Connection sqliteConn, Connection hsqlConn) throws Exception
 	{
 		PreparedStatement hsqlPrep = hsqlConn.prepareStatement("insert into object_values (source_id,object,attrib,value,attrib_type) values (?,?,?,?,?);");
@@ -184,5 +198,5 @@ public class HsqlData {
 		rs.close();
 		hsqlPrep.close();
 	}
-	
+	*/
 }
