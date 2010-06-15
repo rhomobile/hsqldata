@@ -4,3 +4,5 @@ bin
 *.properties
 .metadata
 src/org
+*.data
+*.schema
