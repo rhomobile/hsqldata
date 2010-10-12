@@ -90,7 +90,7 @@ public class HsqlData {
 				strQuest += ",";
 			}
 			
-			strInsert += rsRows.getMetaData().getColumnName(i);
+			strInsert += "\"" + rsRows.getMetaData().getColumnName(i) + "\"";
 			strQuest += "?";
 		}
 		
