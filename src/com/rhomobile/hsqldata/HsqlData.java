@@ -102,29 +102,34 @@ public class HsqlData {
 	{
 		Statement sqliteStat = sqliteConn.createStatement();
 		ResultSet rsRows = sqliteStat.executeQuery("SELECT * FROM " + strTable);
-		PreparedStatement hsqlPrep = null;
-		
-		while (rsRows.next()) 
+		while (rsRows.next())
 		{
-	    	if ( hsqlPrep == null )
-	    	{
-	    		String strInsert = createInsertStatement(rsRows, strTable);
-	    		hsqlPrep = hsqlConn.prepareStatement(strInsert);
-	    	}
-
-	    	for ( int i = 1; i <= rsRows.getMetaData().getColumnCount(); i++)
-	    		hsqlPrep.setObject(i,rsRows.getObject(i));
-	    	
-    		hsqlPrep.addBatch();
-		}
-		
-		if ( hsqlPrep != null )
-		{
-			hsqlConn.setAutoCommit(false);
-			hsqlPrep.executeBatch();
-			hsqlConn.setAutoCommit(true);
+			PreparedStatement hsqlPrep = null;
+			int nCount = 0;
 			
-			hsqlPrep.close();
+			while (nCount < 10000 && rsRows.next()) 
+			{
+		    	if ( hsqlPrep == null )
+		    	{
+		    		String strInsert = createInsertStatement(rsRows, strTable);
+		    		hsqlPrep = hsqlConn.prepareStatement(strInsert);
+		    	}
+	
+		    	for ( int i = 1; i <= rsRows.getMetaData().getColumnCount(); i++)
+		    		hsqlPrep.setObject(i,rsRows.getObject(i));
+		    	
+		    	nCount++;
+	    		hsqlPrep.addBatch();
+			}
+			
+			if ( hsqlPrep != null )
+			{
+				hsqlConn.setAutoCommit(false);
+				hsqlPrep.executeBatch();
+				hsqlConn.setAutoCommit(true);
+				
+				hsqlPrep.close();
+			}
 		}
 		
 		rsRows.close();
