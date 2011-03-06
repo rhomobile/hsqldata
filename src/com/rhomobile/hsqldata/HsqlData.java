@@ -139,12 +139,21 @@ public class HsqlData {
 	private static void copyAllTables(Connection sqliteConn, Connection hsqlConn) throws Exception
 	{
 		Statement sqliteStat = sqliteConn.createStatement();
-		ResultSet rsTables = sqliteStat.executeQuery("SELECT name FROM sqlite_master WHERE type='table' ");
+		ResultSet rsTables = sqliteStat.executeQuery("SELECT * FROM sqlite_master WHERE type='table' ");
 		
 		while (rsTables.next()) 
 		{
 			String strTable = rsTables.getString("name");
+			String strSql = rsTables.getString("sql");
 			
+			int nPos = strSql.indexOf(strTable);
+			if ( nPos > 0 )
+			{
+				if ( strSql.charAt(nPos-1) == '\"' )
+				{
+					strTable = "\"" + strTable + "\"";
+				}
+			}
 			copyTable(strTable, sqliteConn, hsqlConn);
 		}
 		
