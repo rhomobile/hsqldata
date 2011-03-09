@@ -102,7 +102,7 @@ public class HsqlData {
 	{
 		Statement sqliteStat = sqliteConn.createStatement();
 		ResultSet rsRows = sqliteStat.executeQuery("SELECT * FROM " + strTable);
-		while (rsRows.next())
+		while (true)
 		{
 			PreparedStatement hsqlPrep = null;
 			int nCount = 0;
@@ -129,7 +129,8 @@ public class HsqlData {
 				hsqlConn.setAutoCommit(true);
 				
 				hsqlPrep.close();
-			}
+			}else
+				break;
 		}
 		
 		rsRows.close();
